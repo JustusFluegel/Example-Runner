@@ -1,0 +1,15 @@
+[package]
+name = "example-runner-cli"
+version.workspace = true
+authors.workspace = true
+description.workspace = true
+edition.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cargo_metadata = "0.18.1"
+miette = { version = "5.10.0", features = ["fancy"] }
+serde = { version = "1.0.196", features = ["derive"] }
+tokio = { version = "1.35.1", features = ["full"] }
+toml = "0.8.9"

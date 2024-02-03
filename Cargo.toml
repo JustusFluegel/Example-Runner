@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+authors = ["Justus Fluegel <justusfluegel@gmail.com>"]
+description = "Example runner providing a way to run examples in a automated way in ci"
+edition = "2021"
+
+[workspace.dependencies]
