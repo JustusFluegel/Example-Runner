@@ -135,6 +135,7 @@ dependencies = [
  "cargo_metadata",
  "miette",
  "serde",
+ "thiserror",
  "tokio",
  "toml",
 ]
