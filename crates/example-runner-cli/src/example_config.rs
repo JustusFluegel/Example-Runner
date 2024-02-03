@@ -3,10 +3,12 @@ use std::collections::HashMap;
 use miette::Diagnostic;
 use serde::Deserialize;
 
+use crate::{config_args::ConfigArgs, struct_merge::StructMerge};
+
 #[derive(Deserialize, Debug)]
 pub struct Example {
     pub name: String,
-    pub runner: RunnerOptionVariants,
+    pub runner: Option<RunnerOptionVariants>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -37,22 +39,29 @@ impl From<RunnerOptionVariants> for RunnerOptions {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct RunnerOptions {
-    inherit: Option<String>,
+    template: Option<String>,
     #[serde(flatten)]
     config: ExampleConfig,
 }
 
 #[derive(thiserror::Error, Debug, Diagnostic)]
-
 pub enum TemplateResolveError {
     #[diagnostic(
         code(template_resolve::no_such_template),
         help("Check if the specified template is inside either the package or workspace config")
     )]
-    #[error("No such template `{name}`", name = options.inherit.as_deref().unwrap_or_default())]
+    #[error("No such template `{name}`", name = options.template.as_deref().unwrap_or_default())]
     NoSuchTemplate { options: RunnerOptions },
+}
+
+impl TemplateResolveError {
+    pub fn chain<T>(self, f: impl FnOnce(RunnerOptions) -> T) -> Result<T, TemplateResolveError> {
+        match self {
+            TemplateResolveError::NoSuchTemplate { options } => Ok(f(options)),
+        }
+    }
 }
 
 impl RunnerOptions {
@@ -60,7 +69,7 @@ impl RunnerOptions {
         self,
         templates: Option<&HashMap<String, ExampleConfig>>,
     ) -> Result<ExampleConfig, TemplateResolveError> {
-        if let Some(template_name) = &self.inherit {
+        if let Some(template_name) = &self.template {
             let Some(template) = templates
                 .and_then(|templates| templates.get(template_name))
                 .cloned()
@@ -77,22 +86,76 @@ impl RunnerOptions {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct ExampleConfig {
-    r#type: Option<RunnerType>,
-    arguments: Option<Vec<String>>,
+    pub r#type: Option<RunnerType>,
+    #[serde(flatten)]
+    pub args: ConfigArgs,
 }
 
-impl ExampleConfig {
-    /// Joins two `ExampleConfig`'s by keeping existing values from `self`.
-    pub fn join(self, other: Self) -> Self {
-        Self {
-            r#type: self.r#type.or(other.r#type),
-            arguments: self.arguments.or(other.arguments),
+#[derive(Debug, Clone)]
+pub struct ExampleConfigFinalized {
+    pub r#type: RunnerType,
+    pub args: ConfigArgs,
+}
+
+impl From<ExampleConfigFinalized> for ExampleConfig {
+    fn from(value: ExampleConfigFinalized) -> Self {
+        ExampleConfig {
+            r#type: Some(value.r#type),
+            args: value.args,
         }
     }
+}
 
-    /// Merges two `ExampleConfig`'s by overwriting existing values in `self`.
-    pub fn merge(self, other: Self) -> Self {
-        other.join(self)
+impl StructMerge for ExampleConfig {
+    /// Joins two `ExampleConfig`'s by keeping existing values from `self`.
+    fn join(self, other: Self) -> Self {
+        Self {
+            r#type: self.r#type.or(other.r#type),
+            args: self.args.join(other.args),
+        }
+    }
+}
+impl ExampleConfig {
+    /// Same as [`Self::join`] except it will only run if the config is supposed to
+    /// fallback, so for `type = "inherit"`
+    pub fn fallback<T>(self, other: &T) -> Self
+    where
+        T: ToOwned,
+        T::Owned: Into<Self>,
+    {
+        if !matches!(self.r#type, Some(RunnerType::Inherit)) {
+            return self;
+        }
+
+        self.join(other.to_owned().into())
+    }
+
+    pub fn finalize_fallback_to_type(self, r#type: RunnerType) -> ExampleConfigFinalized {
+        ExampleConfigFinalized {
+            r#type: self.r#type.unwrap_or(r#type),
+            args: self.args,
+        }
+    }
+}
+
+impl StructMerge for ExampleConfigFinalized {
+    fn join(self, other: Self) -> Self {
+        Self {
+            r#type: self.r#type,
+            args: self.args.join(other.args),
+        }
+    }
+}
+
+impl ExampleConfigFinalized {
+    /// Same as [`Self::join`] except it will only run if the config is supposed to
+    /// fallback, so for `type = "inherit"`
+    pub fn fallback(self, other: &impl ToOwned<Owned = Self>) -> Self {
+        if !matches!(self.r#type, RunnerType::Inherit) {
+            return self;
+        }
+
+        self.join(other.to_owned())
     }
 }
 
@@ -101,9 +164,9 @@ impl RunnerOptions {
         Self {
             config: ExampleConfig {
                 r#type: Some(r#type),
-                arguments: None,
+                args: Default::default(),
             },
-            inherit: None,
+            template: None,
         }
     }
 }
