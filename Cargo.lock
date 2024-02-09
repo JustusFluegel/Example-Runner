@@ -230,6 +230,7 @@ dependencies = [
  "clap",
  "miette",
  "serde",
+ "serde_json",
  "thiserror",
  "tokio",
  "toml",

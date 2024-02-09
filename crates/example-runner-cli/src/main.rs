@@ -17,8 +17,10 @@ use crate::{
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 struct Args {
-    #[arg(short, long)]
+    #[arg(long)]
     error_on_unconfigured: bool,
+    #[arg(long)]
+    error_on_unknown: bool,
 }
 
 #[derive(thiserror::Error, Debug, Diagnostic)]
@@ -38,6 +40,14 @@ enum AppError {
     )]
     #[error("An unconfigured example was encountered")]
     UnconfiguredExample,
+    #[diagnostic(
+        code(app::unknown_example),
+        help(
+            "Check the output above for unconfigured examples and remove the configuration of them"
+        )
+    )]
+    #[error("An unconfigured example was encountered")]
+    UnknownExample,
 }
 
 #[tokio::main]
@@ -53,6 +63,7 @@ async fn main_wrapper() -> Result<(), AppError> {
     let ExamplesConfiguration {
         examples,
         unconfigured,
+        unknown,
     } = ExamplesConfiguration::from_metadata(&metadata).await?;
 
     let unconfigured_examples_present = !unconfigured.is_empty();
@@ -68,9 +79,26 @@ async fn main_wrapper() -> Result<(), AppError> {
             target.name
         )
     }
+    let unknown_examples_present = !unknown.is_empty();
+    for (package_id, example_name) in unknown {
+        println!(
+            "Unknown example configured in crate {}: {}",
+            metadata
+                .packages
+                .iter()
+                .find(|package| package.id == package_id)
+                .unwrap()
+                .name,
+            example_name
+        )
+    }
 
     if args.error_on_unconfigured && unconfigured_examples_present {
         return Err(AppError::UnconfiguredExample);
+    }
+
+    if args.error_on_unknown && unknown_examples_present {
+        return Err(AppError::UnknownExample);
     }
 
     dbg!(examples);
