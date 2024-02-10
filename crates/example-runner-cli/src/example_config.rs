@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use miette::Diagnostic;
 use serde::Deserialize;
 
-use crate::{config_args::ConfigArgs, struct_merge::StructMerge};
+use crate::{
+    config_args::{ConfigArgs, FinalizedConfigArgs},
+    struct_merge::StructMerge,
+};
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum RunnerType {
@@ -76,6 +79,14 @@ impl RunnerOptions {
             template: None,
         }
     }
+
+    pub fn extract_config(mut self) -> ExampleConfig {
+        if self.config.args.label.is_none() {
+            self.config.args.label = self.template
+        }
+
+        self.config
+    }
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -98,7 +109,7 @@ impl ExampleConfig {
     pub fn with_default_type(self, r#type: RunnerType) -> ExampleConfigFinalized {
         ExampleConfigFinalized {
             r#type: self.r#type.unwrap_or(r#type),
-            args: self.args,
+            args: self.args.finalize(),
         }
     }
 }
@@ -106,5 +117,5 @@ impl ExampleConfig {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ExampleConfigFinalized {
     pub r#type: RunnerType,
-    pub args: ConfigArgs,
+    pub args: FinalizedConfigArgs,
 }

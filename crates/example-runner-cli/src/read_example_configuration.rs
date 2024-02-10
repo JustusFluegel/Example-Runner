@@ -121,7 +121,11 @@ impl<'a> ExamplesConfiguration<'a> {
         let workspace_default_configs = workspace_config
             .default
             .into_iter()
-            .map(|config| config.config.with_default_type(RunnerType::Explicit))
+            .map(|config| {
+                config
+                    .extract_config()
+                    .with_default_type(RunnerType::Explicit)
+            })
             .collect::<HashSet<_>>();
 
         for package in metadata.workspace_packages() {
@@ -145,10 +149,11 @@ impl<'a> ExamplesConfiguration<'a> {
                 })
                 .collect::<Result<HashSet<_>, _>>()?;
 
-            let package_default_configs = example_runner
-                .default
-                .into_iter()
-                .map(|config| config.config.with_default_type(RunnerType::Explicit));
+            let package_default_configs = example_runner.default.into_iter().map(|config| {
+                config
+                    .extract_config()
+                    .with_default_type(RunnerType::Explicit)
+            });
 
             let fallback_configs =
                 if package_default_configs.len() > 0 && !example_runner.extend_workspace_defaults {
@@ -183,7 +188,9 @@ impl<'a> ExamplesConfiguration<'a> {
                                         config.resolve_templates(&workspace_config.templates)
                                     })?;
                                 Ok::<_, TemplateResolveError>(
-                                    config.config.with_default_type(RunnerType::Explicit),
+                                    config
+                                        .extract_config()
+                                        .with_default_type(RunnerType::Explicit),
                                 )
                             })
                             .collect::<Result<HashSet<_>, _>>()?;

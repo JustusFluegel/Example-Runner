@@ -1,3 +1,5 @@
+WARNING: This crate is still in development. Not all of the below mentioned configuration options do actually work. Currently examples are always run, regardless of the specified type!
+
 # Example Runner
 
 ## Example Configuration
@@ -21,6 +23,7 @@ exhaustive object configuration like so:
 [[package.metadata.example_runner.examples.example_name]]
 type = "explicit"
 template = "some_template"
+expected_exit_status = "failure"
 arguments = [
   "--some-cli-arg"
 ]
@@ -37,6 +40,7 @@ extend_configurations = true
 [[package.metadata.example_runner.examples.example_name.configurations]]
 type = "explicit"
 template = "some_template"
+expected_exit_status = "failure"
 arguments = [
   "--some-cli-arg"
 ]
@@ -47,7 +51,7 @@ arguments = [
 - `type`: One of `explicit|no_run|ignore`. Explicit creates a new configuration (default), no_run only compiles the example and ignore completely ignores it.
 - `template`: Some template to use. Template resolution occurs in the following order: crate, then workspace.
 - `arguments`: Arguments to pass to the test while running it.
-
+- `expected_exit_status`: Either one of `success|failure` or some specific `i32` status code: Fails if the example doesn't exit with this status code. Defaults to `success`.
 
 ## Runner Configuration
 Runner configuration can be specified in a workspace using `workspace.example_runner`, or in a package using just `example_runner` as follows:
