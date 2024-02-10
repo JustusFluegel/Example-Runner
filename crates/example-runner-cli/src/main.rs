@@ -13,7 +13,7 @@ use futures::{
     stream::{FuturesOrdered, FuturesUnordered},
     StreamExt,
 };
-use miette::{Diagnostic, IntoDiagnostic};
+use miette::Diagnostic;
 use read_example_configuration::ExamplesConfigurationError;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
 

@@ -3,11 +3,12 @@ resolver = "2"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Justus Fluegel <justusfluegel@gmail.com>"]
 description = "Example runner providing a way to run examples in a automated way"
 repository = "https://github.com/JustusFluegel/example-runner"
-license = "MIT or Apache-2.0"
+license = "MIT OR Apache-2.0"
 edition = "2021"
+readme = "README.md"
 
 [workspace.dependencies]
