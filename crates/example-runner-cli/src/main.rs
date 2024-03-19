@@ -1,6 +1,7 @@
 mod cargo_metadata_async;
 mod config_args;
 mod example_config;
+mod execute_examples;
 mod read_example_configuration;
 mod struct_merge;
 mod templates;
@@ -160,81 +161,6 @@ async fn main_wrapper() -> Result<(), AppError> {
         })
     });
 
-    type StdioHandles = (
-        tokio::task::JoinHandle<Result<(), tokio::io::Error>>,
-        tokio::task::JoinHandle<Result<(), tokio::io::Error>>,
-    );
-
-    fn run_command(
-        ((package_name, target_name, config_name), mut command, configuration): (
-            (String, String, String),
-            tokio::process::Command,
-            ExampleConfigFinalized,
-        ),
-    ) -> std::io::Result<(
-        tokio::process::Child,
-        StdioHandles,
-        ExampleConfigFinalized,
-        (String, String, String),
-    )> {
-        let mut child = command.spawn()?;
-
-        let stdout = child.stdout.take().unwrap();
-        let mut root_stdout = tokio::io::stdout();
-        let package_name_copy = package_name.clone();
-        let target_name_copy = target_name.clone();
-        let config_name_copy = config_name.clone();
-        let stdout_handle = tokio::spawn(async move {
-            let mut buf_reader = tokio::io::BufReader::new(stdout).lines();
-            while let Some(line) = buf_reader.next_line().await? {
-                root_stdout
-                    .write_all(
-                        format!(
-                            "[{package} {example} <{config}>] {line}\n",
-                            package = package_name_copy,
-                            example = target_name_copy,
-                            config = config_name_copy
-                        )
-                        .as_bytes(),
-                    )
-                    .await?;
-            }
-
-            Ok::<_, std::io::Error>(())
-        });
-
-        let stderr = child.stderr.take().unwrap();
-        let mut root_stderr = tokio::io::stderr();
-        let package_name_copy = package_name.clone();
-        let target_name_copy = target_name.clone();
-        let config_name_copy = config_name.clone();
-        let stderr_handle = tokio::spawn(async move {
-            let mut buf_reader = tokio::io::BufReader::new(stderr).lines();
-            while let Some(line) = buf_reader.next_line().await? {
-                root_stderr
-                    .write_all(
-                        format!(
-                            "[{package} {example} <{config}>] {line}\n",
-                            package = package_name_copy,
-                            example = target_name_copy,
-                            config = config_name_copy
-                        )
-                        .as_bytes(),
-                    )
-                    .await?;
-            }
-
-            Ok::<_, std::io::Error>(())
-        });
-
-        Ok((
-            child,
-            (stdout_handle, stderr_handle),
-            configuration,
-            (package_name, target_name, config_name),
-        ))
-    }
-
     let results = if args.parallel {
         let mut handles = to_be_run.map(run_command).collect::<Result<Vec<_>, _>>()?;
 
@@ -288,4 +214,81 @@ async fn main_wrapper() -> Result<(), AppError> {
     } else {
         Ok(())
     }
+}
+
+type StdioHandles = (
+    tokio::task::JoinHandle<Result<(), tokio::io::Error>>,
+    tokio::task::JoinHandle<Result<(), tokio::io::Error>>,
+);
+
+type ConfigurationNames = (String, String, String);
+
+fn run_command(
+    ((package_name, target_name, config_name), mut command, configuration): (
+        ConfigurationNames,
+        tokio::process::Command,
+        ExampleConfigFinalized,
+    ),
+) -> std::io::Result<(
+    tokio::process::Child,
+    StdioHandles,
+    ExampleConfigFinalized,
+    ConfigurationNames,
+)> {
+    let mut child = command.spawn()?;
+
+    let stdout = child.stdout.take().unwrap();
+    let mut root_stdout = tokio::io::stdout();
+    let package_name_copy = package_name.clone();
+    let target_name_copy = target_name.clone();
+    let config_name_copy = config_name.clone();
+    let stdout_handle = tokio::spawn(async move {
+        let mut buf_reader = tokio::io::BufReader::new(stdout).lines();
+        while let Some(line) = buf_reader.next_line().await? {
+            root_stdout
+                .write_all(
+                    format!(
+                        "[{package} {example} <{config}>] {line}\n",
+                        package = package_name_copy,
+                        example = target_name_copy,
+                        config = config_name_copy
+                    )
+                    .as_bytes(),
+                )
+                .await?;
+        }
+
+        Ok::<_, std::io::Error>(())
+    });
+
+    let stderr = child.stderr.take().unwrap();
+    let mut root_stderr = tokio::io::stderr();
+    let package_name_copy = package_name.clone();
+    let target_name_copy = target_name.clone();
+    let config_name_copy = config_name.clone();
+    let stderr_handle = tokio::spawn(async move {
+        let mut buf_reader = tokio::io::BufReader::new(stderr).lines();
+        while let Some(line) = buf_reader.next_line().await? {
+            root_stderr
+                .write_all(
+                    format!(
+                        "[{package} {example} <{config}>] {line}\n",
+                        package = package_name_copy,
+                        example = target_name_copy,
+                        config = config_name_copy
+                    )
+                    .as_bytes(),
+                )
+                .await?;
+        }
+
+        Ok::<_, std::io::Error>(())
+    });
+
+    Ok((
+        child,
+        (stdout_handle, stderr_handle),
+        configuration,
+        (package_name, target_name, config_name),
+    ))
 }
