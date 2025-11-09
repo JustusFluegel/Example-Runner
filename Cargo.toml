@@ -3,12 +3,25 @@ resolver = "2"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Justus Fluegel <justusfluegel@gmail.com>"]
 description = "Example runner providing a way to run examples in a automated way"
 repository = "https://github.com/JustusFluegel/example-runner"
+homepage = "https://github.com/JustusFluegel/example-runner"
 license = "MIT OR Apache-2.0"
 edition = "2021"
 readme = "README.md"
 
 [workspace.dependencies]
+cargo_metadata = "0.18.1"
+futures = "0.3.30"
+miette = "5.10.0"
+serde = "1.0.196"
+serde_json = "1.0.113"
+thiserror = "1.0.56"
+tokio = "1.35.1"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

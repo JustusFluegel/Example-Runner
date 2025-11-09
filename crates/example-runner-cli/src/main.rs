@@ -136,9 +136,9 @@ async fn main_wrapper() -> Result<(), AppError> {
             command
                 .arg("run")
                 .arg("-p")
-                .arg(&package.name.clone())
+                .arg(&package.name)
                 .arg("--example")
-                .arg(&id.1.name.clone())
+                .arg(&id.1.name)
                 .arg("--")
                 .args(configuration.args.arguments.clone())
                 .stdout(Stdio::piped())
