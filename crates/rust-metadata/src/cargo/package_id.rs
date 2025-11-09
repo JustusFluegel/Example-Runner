@@ -6,4 +6,6 @@ fn str_num(input: &str) -> IResult<&str, u32> {
     map_res(digit1, |r| u32::from_str_radix(r, 10))(input)
 }
 
-fn semver(input: &str) -> IResult<&str, Semver> {}
+fn semver(input: &str) -> IResult<&str, Semver> {
+    todo!()
+}
